@@ -1,2 +1,2 @@
-const API_BASE = 'http://192.168.31.17:9090/api';
+const API_BASE = 'https://cerebro-connect.onrender.com/api';
 export default API_BASE;
