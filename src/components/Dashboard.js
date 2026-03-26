@@ -127,7 +127,9 @@ const Dashboard = () => {
     try {
       setLoading(true);
       setError('');
-
+        console.log("Dashboard token:", token);
+        console.log("Dashboard userId:", userId);
+        console.log("Auth headers:", JSON.stringify(authHeaders, null, 2));
       const res = await axios.get(
         `${API_BASE}/eeg/sessions/${userId}`,
         authHeaders
