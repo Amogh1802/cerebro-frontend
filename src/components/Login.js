@@ -45,7 +45,14 @@ const Login = ({ setIsAuthenticated }) => {
         });
       }
 
-      console.log('FULL auth response:', response.data);
+      console.log("FULL auth response:", JSON.stringify(response.data, null, 2));
+      console.log("token =", response.data?.token);
+      console.log("jwt =", response.data?.jwt);
+      console.log("accessToken =", response.data?.accessToken);
+      console.log("id =", response.data?.id);
+      console.log("userId =", response.data?.userId);
+      console.log("role =", response.data?.role);
+      console.log("name =", response.data?.name);
 
       const token =
         response.data?.token ||
