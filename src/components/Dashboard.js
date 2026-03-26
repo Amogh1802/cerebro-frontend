@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import API_BASE_URL from '../config';
+import EEGMonitor from './EEGMonitor';
 
 const API_BASE = API_BASE_URL;
 
@@ -21,6 +22,7 @@ const Dashboard = () => {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [showSessionModal, setShowSessionModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
+  const [showEEGMonitor, setShowEEGMonitor] = useState(false); // NEW
   const [unassignedPatients, setUnassignedPatients] = useState([]);
   const [eegMode, setEegMode] = useState('GENERAL');
   const [sessionStarted, setSessionStarted] = useState(false);
@@ -36,7 +38,6 @@ const Dashboard = () => {
     else fetchMyEEGSessions();
   }, []);
 
-  // FIXED: fetch all sessions once patients are loaded
   useEffect(() => {
     if (patients.length > 0 && isDoctor) {
       fetchAllSessions();
@@ -55,7 +56,6 @@ const Dashboard = () => {
     }
   };
 
-  // FIXED: fetch sessions for all patients
   const fetchAllSessions = async (patientList) => {
     try {
       const list = patientList || patients;
@@ -113,18 +113,14 @@ const Dashboard = () => {
   };
 
   const handleStartSession = async () => {
-    if (sessionStarted) {
-      setSessionStarted(false);
-      fetchAllSessions(); // FIXED: refresh sessions after stopping
-      return;
-    }
     try {
       await axios.post(`${API_BASE}/eeg/session`, {
         patientId: selectedPatient.id,
         mode: eegMode,
         notes: `${eegMode} EEG session started by Dr. ${name}`,
       }, authHeaders);
-      setSessionStarted(true);
+      setShowSessionModal(false);
+      setShowEEGMonitor(true); // OPEN LIVE MONITOR
     } catch (err) {
       setError('Failed to start EEG session.');
     }
@@ -135,7 +131,6 @@ const Dashboard = () => {
     navigate('/');
   };
 
-  // FIXED: today's sessions count
   const todaySessionsCount = allSessions.filter(s => {
     if (!s.startTime) return false;
     const today = new Date().toDateString();
@@ -262,11 +257,16 @@ const Dashboard = () => {
     }),
     modeDesc: { fontSize: 11, color: '#9ab5c0', marginTop: 2 },
     startBtn: {
-      width: '100%', padding: '14px',
-      background: sessionStarted ? '#ef4444' : '#2a8c5a',
+      width: '100%', padding: '14px', background: '#2a8c5a',
       color: '#fff', border: 'none', borderRadius: 10, fontSize: 15,
       fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit',
       marginBottom: 10, transition: 'background 0.2s ease',
+    },
+    liveBtn: {
+      width: '100%', padding: '14px', background: '#7c3aed',
+      color: '#fff', border: 'none', borderRadius: 10, fontSize: 15,
+      fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit',
+      marginBottom: 10,
     },
     cancelBtn: {
       width: '100%', padding: '12px', background: 'transparent', color: '#9ab5c0',
@@ -380,7 +380,6 @@ const Dashboard = () => {
           {error && <div style={styles.errorBox}>⚠ {error}</div>}
           {successMsg && <div style={styles.successBox}>✓ {successMsg}</div>}
 
-          {/* FIXED: real stats from actual session data */}
           <div style={styles.statsRow}>
             <div style={styles.statCard('#2a8c5a')}>
               <p style={styles.statNumber('#2a8c5a')}>{patients.length}</p>
@@ -483,18 +482,10 @@ const Dashboard = () => {
 
       {/* EEG Session Modal */}
       {showSessionModal && selectedPatient && (
-        <div style={styles.overlay} onClick={() => !sessionStarted && setShowSessionModal(false)}>
+        <div style={styles.overlay} onClick={() => setShowSessionModal(false)}>
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
             <h2 style={styles.modalTitle}>EEG Session</h2>
             <p style={styles.modalSubtitle}>Patient: <strong>{selectedPatient.name}</strong></p>
-            {sessionStarted && (
-              <div style={styles.sessionActive}>
-                <div style={styles.pulse} />
-                <span style={{ fontSize: 13, color: '#16a34a', fontWeight: '600' }}>
-                  Session Active — Recording {eegMode} EEG...
-                </span>
-              </div>
-            )}
             <p style={{ fontSize: 13, fontWeight: '600', color: '#4a6a7a', marginBottom: 12 }}>Select EEG Mode:</p>
             <div style={styles.modeGrid}>
               {[
@@ -503,26 +494,46 @@ const Dashboard = () => {
                 { mode: 'GENERAL', emoji: '🧠', desc: 'Full band analysis' },
               ].map(({ mode, emoji, desc }) => (
                 <div key={mode} style={styles.modeCard(mode)}
-                  onClick={() => !sessionStarted && setEegMode(mode)}>
+                  onClick={() => setEegMode(mode)}>
                   <span style={styles.modeEmoji}>{emoji}</span>
                   <p style={styles.modeLabel(mode)}>{mode}</p>
                   <p style={styles.modeDesc}>{desc}</p>
                 </div>
               ))}
             </div>
+
+            {/* Start Session + Save to DB */}
             <button style={styles.startBtn} onClick={handleStartSession}>
-              {sessionStarted ? '⏹ Stop Session' : '▶ Start Session'}
+              ▶ Start Session (Save to DB)
             </button>
+
+            {/* Open Live EEG Monitor without saving */}
+            <button style={styles.liveBtn} onClick={() => {
+              setShowSessionModal(false);
+              setShowEEGMonitor(true);
+            }}>
+              📡 Open Live EEG Monitor
+            </button>
+
             <button style={styles.cancelBtn}
-              onClick={() => {
-                setShowSessionModal(false);
-                setSessionStarted(false);
-                fetchAllSessions(); // refresh on close
-              }}>
-              {sessionStarted ? 'Close (session saved)' : 'Cancel'}
+              onClick={() => setShowSessionModal(false)}>
+              Cancel
             </button>
           </div>
         </div>
+      )}
+
+      {/* LIVE EEG MONITOR */}
+      {showEEGMonitor && selectedPatient && (
+        <EEGMonitor
+          patientId={selectedPatient.id}
+          patientName={selectedPatient.name}
+          eegMode={eegMode}
+          onClose={() => {
+            setShowEEGMonitor(false);
+            fetchAllSessions();
+          }}
+        />
       )}
     </>
   );
