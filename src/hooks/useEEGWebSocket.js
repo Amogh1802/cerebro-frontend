@@ -1,7 +1,9 @@
-9// src/hooks/useEEGWebSocket.js
 import { useEffect, useState, useRef } from 'react';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
+import API_BASE_URL from '../config';
+
+const WS_URL = API_BASE_URL.replace('/api', '/ws');
 
 export const useEEGWebSocket = () => {
   const [eegData, setEegData] = useState(null);
@@ -10,20 +12,19 @@ export const useEEGWebSocket = () => {
 
   useEffect(() => {
     const client = new Client({
-      webSocketFactory: () => new SockJS('http://localhost:9090/ws'),
+      webSocketFactory: () => new SockJS(WS_URL),
       debug: (str) => console.log('STOMP:', str),
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
 
       onConnect: () => {
-        console.log('✅ Connected to WebSocket');
+        console.log('Connected to WebSocket');
         setIsConnected(true);
 
         client.subscribe('/topic/eeg', (message) => {
           try {
             const data = JSON.parse(message.body);
-            console.log('📊 EEG Data received:', data);
             setEegData(data);
           } catch (error) {
             console.error('Error parsing EEG data:', error);
@@ -32,12 +33,11 @@ export const useEEGWebSocket = () => {
       },
 
       onStompError: (frame) => {
-        console.error('❌ STOMP error:', frame);
+        console.error('STOMP error:', frame);
         setIsConnected(false);
       },
 
       onDisconnect: () => {
-        console.log('🔌 Disconnected from WebSocket');
         setIsConnected(false);
       },
     });
