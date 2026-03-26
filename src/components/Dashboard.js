@@ -33,15 +33,19 @@ const Dashboard = () => {
 
   const accent = isDoctor ? '#2a8c5a' : '#2a7d9c';
 
-  const authHeaders = useMemo(() => ({
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-  }), [token]);
+  const authHeaders = useMemo(
+    () => ({
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    }),
+    [token]
+  );
 
   const handleAuthError = (err, fallbackMessage) => {
     console.error(fallbackMessage, err);
+    console.error('Response body:', err?.response?.data);
 
     if (err?.response?.status === 401 || err?.response?.status === 403) {
       setError('Session expired. Please login again.');
@@ -56,6 +60,10 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
+    console.log('Dashboard token:', token);
+    console.log('Dashboard userId:', userId);
+    console.log('Dashboard role:', role);
+
     if (!token || !userId || !role) {
       navigate('/');
       return;
@@ -341,11 +349,6 @@ const Dashboard = () => {
       border: '1.5px solid #e2eef2', borderRadius: 10, fontSize: 14,
       cursor: 'pointer', fontFamily: 'inherit',
     },
-    sessionActive: {
-      background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10,
-      padding: '12px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10,
-    },
-    pulse: { width: 10, height: 10, borderRadius: '50%', background: '#22c55e', animation: 'pulse 1.5s infinite' },
   };
 
   if (!isDoctor) {

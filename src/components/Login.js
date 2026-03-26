@@ -16,6 +16,7 @@ const Login = ({ setIsAuthenticated }) => {
   const [isRegister, setIsRegister] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
   const navigate = useNavigate();
 
   const accent = isDoctor ? '#2a8c5a' : '#2a7d9c';
@@ -44,16 +45,15 @@ const Login = ({ setIsAuthenticated }) => {
         });
       }
 
-      console.log('Auth response:', response.data);
+      console.log('FULL auth response:', response.data);
 
       const token =
         response.data?.token ||
         response.data?.jwt ||
         response.data?.accessToken ||
+        response.data?.access_token ||
         '';
 
-      const userRole = response.data?.role || defaultRole;
-      const userName = response.data?.name || name.trim() || '';
       const userId =
         response.data?.id ||
         response.data?.userId ||
@@ -61,21 +61,29 @@ const Login = ({ setIsAuthenticated }) => {
         response.data?.patientId ||
         '';
 
+      const role = response.data?.role || defaultRole;
+      const userName = response.data?.name || name.trim() || '';
+
       if (!token) {
         throw new Error('No token received from backend');
       }
 
       localStorage.clear();
       localStorage.setItem('token', token);
-      localStorage.setItem('role', userRole);
+      localStorage.setItem('userId', String(userId));
+      localStorage.setItem('role', role);
       localStorage.setItem('name', userName);
       localStorage.setItem('email', email.trim());
-      localStorage.setItem('userId', String(userId));
+
+      console.log('Stored token:', localStorage.getItem('token'));
+      console.log('Stored userId:', localStorage.getItem('userId'));
+      console.log('Stored role:', localStorage.getItem('role'));
 
       setIsAuthenticated(true);
       navigate('/dashboard');
     } catch (err) {
       console.error('Login/Register error:', err);
+      console.error('Backend error body:', err.response?.data);
 
       const errorMsg =
         err.response?.data?.error ||
