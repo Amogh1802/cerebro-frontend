@@ -47,8 +47,10 @@ const EEGMonitor = ({ patientId, patientName, onClose }) => {
   const connectWebSocket = () => {
     const client = new Client({
       webSocketFactory: () => new SockJS(WS_URL),
-      reconnectDelay: 3000,
+      reconnectDelay: 5000,
       debug: (str) => console.log('STOMP:', str),
+      heartbeatIncoming: 0,
+      heartbeatOutgoing: 0,
 
       onConnect: () => {
         console.log('EEGMonitor connected to WebSocket:', WS_URL);
@@ -72,6 +74,11 @@ const EEGMonitor = ({ patientId, patientName, onClose }) => {
 
       onStompError: (frame) => {
         console.error('STOMP error:', frame);
+        setConnected(false);
+      },
+
+      onWebSocketClose: (event) => {
+        console.error('WebSocket closed:', event);
         setConnected(false);
       },
 
