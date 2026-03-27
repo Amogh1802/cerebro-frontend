@@ -26,7 +26,6 @@ const Dashboard = () => {
   const [showEEGMonitor, setShowEEGMonitor] = useState(false);
   const [unassignedPatients, setUnassignedPatients] = useState([]);
   const [eegMode, setEegMode] = useState('GENERAL');
-  const [sessionStarted, setSessionStarted] = useState(false);
   const [hoveredRow, setHoveredRow] = useState(null);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -60,10 +59,6 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    console.log('Dashboard token:', token);
-    console.log('Dashboard userId:', userId);
-    console.log('Dashboard role:', role);
-
     if (!token || !userId || !role) {
       navigate('/');
       return;
@@ -86,12 +81,7 @@ const Dashboard = () => {
     try {
       setLoading(true);
       setError('');
-
-      const res = await axios.get(
-        `${API_BASE}/patients/doctor/${userId}`,
-        authHeaders
-      );
-
+      const res = await axios.get(`${API_BASE}/patients/doctor/${userId}`, authHeaders);
       setPatients(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       handleAuthError(err, 'Failed to load patients.');
@@ -103,19 +93,13 @@ const Dashboard = () => {
   const fetchAllSessions = async (patientList) => {
     try {
       setError('');
-
       const list = patientList || patients;
-
       const sessionPromises = list.map((p) =>
         axios
           .get(`${API_BASE}/eeg/sessions/${p.id}`, authHeaders)
           .then((res) => res.data)
-          .catch((err) => {
-            console.error(`Failed to fetch sessions for patient ${p.id}`, err);
-            return [];
-          })
+          .catch(() => [])
       );
-
       const results = await Promise.all(sessionPromises);
       setAllSessions(results.flat());
     } catch (err) {
@@ -127,14 +111,7 @@ const Dashboard = () => {
     try {
       setLoading(true);
       setError('');
-        console.log("Dashboard token:", token);
-        console.log("Dashboard userId:", userId);
-        console.log("Auth headers:", JSON.stringify(authHeaders, null, 2));
-      const res = await axios.get(
-        `${API_BASE}/eeg/sessions/${userId}`,
-        authHeaders
-      );
-
+      const res = await axios.get(`${API_BASE}/eeg/sessions/${userId}`, authHeaders);
       setEegSessions(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       handleAuthError(err, 'Failed to load your sessions.');
@@ -146,13 +123,11 @@ const Dashboard = () => {
   const fetchUnassignedPatients = async () => {
     try {
       setError('');
-
       const res = await axios.get(`${API_BASE}/users/patients`, authHeaders);
       const assignedIds = patients.map((p) => p.id);
       const unassigned = (Array.isArray(res.data) ? res.data : []).filter(
         (p) => !assignedIds.includes(p.id)
       );
-
       setUnassignedPatients(unassigned);
       setShowAssignModal(true);
     } catch (err) {
@@ -163,30 +138,24 @@ const Dashboard = () => {
   const handleAssignPatient = async (patientId) => {
     try {
       setError('');
-
       await axios.post(
         `${API_BASE}/patients/assign`,
-        {
-          patientId,
-          doctorId: parseInt(userId, 10),
-        },
+        { patientId, doctorId: parseInt(userId, 10) },
         authHeaders
       );
-
       setShowAssignModal(false);
       setSuccessMsg('Patient assigned successfully!');
       setTimeout(() => setSuccessMsg(''), 3000);
-
       fetchPatients();
     } catch (err) {
       handleAuthError(err, 'Failed to assign patient.');
     }
   };
 
+  // FIXED: Now refreshes session count after starting a session
   const handleStartSession = async () => {
     try {
       setError('');
-
       await axios.post(
         `${API_BASE}/eeg/session`,
         {
@@ -199,6 +168,13 @@ const Dashboard = () => {
 
       setShowSessionModal(false);
       setShowEEGMonitor(true);
+
+      // Refresh sessions and update counts immediately
+      await fetchAllSessions();
+
+      setSuccessMsg(`Session started in ${eegMode} mode!`);
+      setTimeout(() => setSuccessMsg(''), 3000);
+
     } catch (err) {
       handleAuthError(err, 'Failed to start EEG session.');
     }
@@ -216,6 +192,7 @@ const Dashboard = () => {
   }).length;
 
   const styles = {
+    // ... your existing styles (kept unchanged)
     page: { minHeight: '100vh', background: '#f0f7f9', fontFamily: "'Segoe UI', sans-serif" },
     navbar: {
       background: '#fff', borderBottom: '1px solid #e2eef2', padding: '0 32px',
@@ -353,6 +330,7 @@ const Dashboard = () => {
     },
   };
 
+  // Patient View
   if (!isDoctor) {
     return (
       <>
@@ -410,9 +388,7 @@ const Dashboard = () => {
                 <div style={styles.emptyState}>No EEG sessions yet. Your doctor will schedule one for you.</div>
               ) : (
                 eegSessions.map((session) => (
-                  <div
-                    key={session.id}
-                    style={styles.tableRow(hoveredRow === session.id, '1fr 1.5fr 2fr 2fr')}
+                  <div key={session.id} style={styles.tableRow(hoveredRow === session.id, '1fr 1.5fr 2fr 2fr')}
                     onMouseEnter={() => setHoveredRow(session.id)}
                     onMouseLeave={() => setHoveredRow(null)}
                   >
@@ -430,6 +406,7 @@ const Dashboard = () => {
     );
   }
 
+  // Doctor View
   return (
     <>
       <style>{`@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(1.3)}}*{box-sizing:border-box}`}</style>
@@ -507,7 +484,6 @@ const Dashboard = () => {
                     onClick={() => {
                       setSelectedPatient(patient);
                       setEegMode('GENERAL');
-                      setSessionStarted(false);
                       setShowSessionModal(true);
                     }}
                   >
@@ -520,6 +496,7 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* Assign Patient Modal */}
       {showAssignModal && (
         <div style={styles.overlay} onClick={() => setShowAssignModal(false)}>
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
@@ -552,6 +529,7 @@ const Dashboard = () => {
         </div>
       )}
 
+      {/* EEG Session Modal */}
       {showSessionModal && selectedPatient && (
         <div style={styles.overlay} onClick={() => setShowSessionModal(false)}>
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
@@ -597,6 +575,7 @@ const Dashboard = () => {
         </div>
       )}
 
+      {/* LIVE EEG MONITOR */}
       {showEEGMonitor && selectedPatient && (
         <EEGMonitor
           patientId={selectedPatient.id}
@@ -604,7 +583,7 @@ const Dashboard = () => {
           eegMode={eegMode}
           onClose={() => {
             setShowEEGMonitor(false);
-            fetchAllSessions();
+            fetchAllSessions();   // Refresh count when closing monitor
           }}
         />
       )}
