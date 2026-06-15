@@ -374,6 +374,15 @@ export const LiveEEGSession = ({
           Live EEG Session
         </h2>
 
+        <div style={{
+          background:"red",
+          color:"white",
+          padding:"10px",
+          fontWeight:"bold"
+        }}>
+          TEST BUTTON AREA
+        </div>
+
         <div className="flex items-center gap-4">
 
           <span
@@ -388,9 +397,12 @@ export const LiveEEGSession = ({
               : '🔴 Disconnected'}
           </span>
 
-          <span className="text-gray-600">
-            Mode: {mode}
-          </span>
+         <span className="text-gray-600">
+           Mode: [{String(mode)}]
+         </span>
+         <div style={{background:"yellow", padding:"5px"}}>
+           DEBUG MODE VALUE = [{String(mode)}]
+         </div>
 
           <span className="text-gray-600">
             Patient ID: {patientId}
@@ -400,7 +412,7 @@ export const LiveEEGSession = ({
 
       </div>
 
-      {mode === "COMA" && (
+      {true &&  && (
 
         <div className="mb-6">
 
