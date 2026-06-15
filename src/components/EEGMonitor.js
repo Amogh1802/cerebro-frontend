@@ -455,4 +455,4 @@ const EEGMonitor = ({ patientId, patientName, eegMode, onClose }) => {
   );
 };
 
-export default EEGMonitor;  
+export default EEGMonitor;
