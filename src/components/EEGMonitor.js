@@ -7,8 +7,9 @@ import API_BASE_URL from './config';
 const WS_URL = API_BASE_URL.replace('/api', '/ws');
 const MAX_POINTS = 100;
 
-const EEGMonitor = ({ patientId, patientName, onClose }) => {
+const EEGMonitor = ({ patientId, patientName, eegMode, onClose }) => {
   const [connected, setConnected] = useState(false);
+  const [activeMode, setActiveMode] = useState(eegMode || 'GENERAL');
   const [eegData, setEegData] = useState({
     voltage: [],
     alpha: [],
@@ -63,6 +64,17 @@ const EEGMonitor = ({ patientId, patientName, onClose }) => {
             handleNewData(data);
           } catch (err) {
             console.error('Failed to parse EEG message:', err, message.body);
+          }
+        });
+
+        // Listen for mode changes broadcast by backend when a session starts
+        client.subscribe('/topic/mode', (message) => {
+          try {
+            const payload = JSON.parse(message.body);
+            console.log('Mode received from backend:', payload.mode);
+            if (payload.mode) setActiveMode(payload.mode);
+          } catch (err) {
+            console.error('Failed to parse mode message:', err);
           }
         });
       },
@@ -281,7 +293,7 @@ const EEGMonitor = ({ patientId, patientName, onClose }) => {
     },
     content: { padding: 24, flex: 1 },
     statsRow: {
-      display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)',
+      display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)',
       gap: 12, marginBottom: 24,
     },
     statCard: (color) => ({
@@ -323,7 +335,29 @@ const EEGMonitor = ({ patientId, patientName, onClose }) => {
             <div style={styles.statusDot} />
             <div>
               <h2 style={styles.title}>🧠 Live EEG Monitor — {patientName}</h2>
-              <p style={styles.subtitle}>Real-time signal from LabVIEW • Patient ID: {patientId}</p>
+              <p style={styles.subtitle}>
+                Real-time signal from LabVIEW • Patient ID: {patientId}
+                <span style={{
+                  marginLeft: 12,
+                  padding: '2px 10px',
+                  borderRadius: 20,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: '0.5px',
+                  background: activeMode === 'DEMENTIA' ? 'rgba(245,158,11,0.15)'
+                            : activeMode === 'COMA'     ? 'rgba(239,68,68,0.15)'
+                            :                            'rgba(0,255,136,0.12)',
+                  color:      activeMode === 'DEMENTIA' ? '#f59e0b'
+                            : activeMode === 'COMA'     ? '#ff4466'
+                            :                            '#00ff88',
+                  border: `1px solid ${
+                            activeMode === 'DEMENTIA' ? '#f59e0b55'
+                          : activeMode === 'COMA'     ? '#ff446655'
+                          :                            '#00ff8855'}`,
+                }}>
+                  {activeMode}
+                </span>
+              </p>
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -382,6 +416,20 @@ const EEGMonitor = ({ patientId, patientName, onClose }) => {
               </p>
               <p style={styles.statLabel}>Brain State</p>
             </div>
+            <div style={styles.statCard(
+              activeMode === 'DEMENTIA' ? '#f59e0b'
+            : activeMode === 'COMA'    ? '#ff4466'
+            :                           '#00ff88'
+            )}>
+              <p style={styles.statValue(
+                activeMode === 'DEMENTIA' ? '#f59e0b'
+              : activeMode === 'COMA'    ? '#ff4466'
+              :                           '#00ff88'
+              )}>
+                {activeMode}
+              </p>
+              <p style={styles.statLabel}>EEG Mode</p>
+            </div>
           </div>
 
           <div style={styles.graphsGrid}>
@@ -407,4 +455,4 @@ const EEGMonitor = ({ patientId, patientName, onClose }) => {
   );
 };
 
-export default EEGMonitor;
+export default EEGMonitor;  

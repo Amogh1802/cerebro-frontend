@@ -152,7 +152,7 @@ const Dashboard = () => {
     }
   };
 
-  // FIXED: Now refreshes session count after starting a session
+  // Saves session to DB → backend broadcasts mode to LabVIEW → opens EEG monitor
   const handleStartSession = async () => {
     try {
       setError('');
@@ -166,11 +166,11 @@ const Dashboard = () => {
         authHeaders
       );
 
-      setShowSessionModal(false);
-      setShowEEGMonitor(true);
+      setShowSessionModal(false);  // close modal
+      setShowEEGMonitor(true);     // open live monitor
 
-      // Refresh sessions and update counts immediately
-      await fetchAllSessions();
+      // Refresh session counts in background
+      fetchAllSessions();
 
       setSuccessMsg(`Session started in ${eegMode} mode!`);
       setTimeout(() => setSuccessMsg(''), 3000);
@@ -555,17 +555,7 @@ const Dashboard = () => {
             </div>
 
             <button style={styles.startBtn} onClick={handleStartSession}>
-              ▶ Start Session (Save to DB)
-            </button>
-
-            <button
-              style={styles.liveBtn}
-              onClick={() => {
-                setShowSessionModal(false);
-                setShowEEGMonitor(true);
-              }}
-            >
-              📡 Open Live EEG Monitor
+              ▶ Start Session &amp; Open Monitor
             </button>
 
             <button style={styles.cancelBtn} onClick={() => setShowSessionModal(false)}>
