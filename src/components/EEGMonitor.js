@@ -382,68 +382,66 @@ const EEGMonitor = ({ patientId, patientName, eegMode, onClose }) => {
         </div>
 
         <div style={styles.content}>
-          <div style={styles.statsRow}>
-            <div style={styles.statCard('#ffffff')}>
-              <p style={styles.statValue('#ffffff')}>
-                {Number.isFinite(Number(latestReading?.voltage))
-                  ? Number(latestReading.voltage).toFixed(3)
-                  : '—'}
-              </p>
-              <p style={styles.statLabel}>Voltage (V)</p>
-            </div>
-            <div style={styles.statCard('#00ff88')}>
-              <p style={styles.statValue('#00ff88')}>
-                {Number.isFinite(Number(latestReading?.rmsAlpha ?? latestReading?.alpha))
-                  ? Number(latestReading?.rmsAlpha ?? latestReading?.alpha).toFixed(4)
-                  : '—'}
-              </p>
-              <p style={styles.statLabel}>RMS Alpha</p>
-            </div>
-            <div style={styles.statCard('#ff4466')}>
-              <p style={styles.statValue('#ff4466')}>
-                {Number.isFinite(Number(latestReading?.rmsBeta ?? latestReading?.beta))
-                  ? Number(latestReading?.rmsBeta ?? latestReading?.beta).toFixed(4)
-                  : '—'}
-              </p>
-              <p style={styles.statLabel}>RMS Beta</p>
-            </div>
-            <div style={styles.statCard('#ffcc00')}>
-              <p style={styles.statValue('#ffcc00')}>
-                {Number.isFinite(Number(latestReading?.rmsTheta ?? latestReading?.theta))
-                  ? Number(latestReading?.rmsTheta ?? latestReading?.theta).toFixed(4)
-                  : '—'}
-              </p>
-              <p style={styles.statLabel}>RMS Theta</p>
-            </div>
-            <div style={styles.statCard('#4488ff')}>
-              <p style={styles.statValue('#4488ff')}>
-                {Number.isFinite(Number(latestReading?.rmsDelta ?? latestReading?.delta))
-                  ? Number(latestReading?.rmsDelta ?? latestReading?.delta).toFixed(4)
-                  : '—'}
-              </p>
-              <p style={styles.statLabel}>RMS Delta</p>
-            </div>
-            <div style={styles.statCard(getStateColor(latestReading?.state))}>
-              <p style={styles.statValue(getStateColor(latestReading?.state))}>
-                {latestReading?.state || '—'}
-              </p>
-              <p style={styles.statLabel}>Brain State</p>
-            </div>
-            <div style={styles.statCard(
-              activeMode === 'DEMENTIA' ? '#f59e0b'
-            : activeMode === 'COMA'    ? '#ff4466'
-            :                           '#00ff88'
-            )}>
-              <p style={styles.statValue(
-                activeMode === 'DEMENTIA' ? '#f59e0b'
-              : activeMode === 'COMA'    ? '#ff4466'
-              :                           '#00ff88'
+          {activeMode !== 'COMA' && (
+            <div style={styles.statsRow}>
+              <div style={styles.statCard('#ffffff')}>
+                <p style={styles.statValue('#ffffff')}>
+                  {Number.isFinite(Number(latestReading?.voltage))
+                    ? Number(latestReading.voltage).toFixed(3)
+                    : '—'}
+                </p>
+                <p style={styles.statLabel}>Voltage (V)</p>
+              </div>
+              <div style={styles.statCard('#00ff88')}>
+                <p style={styles.statValue('#00ff88')}>
+                  {Number.isFinite(Number(latestReading?.rmsAlpha ?? latestReading?.alpha))
+                    ? Number(latestReading?.rmsAlpha ?? latestReading?.alpha).toFixed(4)
+                    : '—'}
+                </p>
+                <p style={styles.statLabel}>RMS Alpha</p>
+              </div>
+              <div style={styles.statCard('#ff4466')}>
+                <p style={styles.statValue('#ff4466')}>
+                  {Number.isFinite(Number(latestReading?.rmsBeta ?? latestReading?.beta))
+                    ? Number(latestReading?.rmsBeta ?? latestReading?.beta).toFixed(4)
+                    : '—'}
+                </p>
+                <p style={styles.statLabel}>RMS Beta</p>
+              </div>
+              <div style={styles.statCard('#ffcc00')}>
+                <p style={styles.statValue('#ffcc00')}>
+                  {Number.isFinite(Number(latestReading?.rmsTheta ?? latestReading?.theta))
+                    ? Number(latestReading?.rmsTheta ?? latestReading?.theta).toFixed(4)
+                    : '—'}
+                </p>
+                <p style={styles.statLabel}>RMS Theta</p>
+              </div>
+              <div style={styles.statCard('#4488ff')}>
+                <p style={styles.statValue('#4488ff')}>
+                  {Number.isFinite(Number(latestReading?.rmsDelta ?? latestReading?.delta))
+                    ? Number(latestReading?.rmsDelta ?? latestReading?.delta).toFixed(4)
+                    : '—'}
+                </p>
+                <p style={styles.statLabel}>RMS Delta</p>
+              </div>
+              <div style={styles.statCard(getStateColor(latestReading?.state))}>
+                <p style={styles.statValue(getStateColor(latestReading?.state))}>
+                  {latestReading?.state || '—'}
+                </p>
+                <p style={styles.statLabel}>Brain State</p>
+              </div>
+              <div style={styles.statCard(
+                activeMode === 'DEMENTIA' ? '#f59e0b' : '#00ff88'
               )}>
-                {activeMode}
-              </p>
-              <p style={styles.statLabel}>EEG Mode</p>
+                <p style={styles.statValue(
+                  activeMode === 'DEMENTIA' ? '#f59e0b' : '#00ff88'
+                )}>
+                  {activeMode}
+                </p>
+                <p style={styles.statLabel}>EEG Mode</p>
+              </div>
             </div>
-          </div>
+          )}
 
           {activeMode === 'COMA' ? (
             <div style={styles.graphsGrid}>
