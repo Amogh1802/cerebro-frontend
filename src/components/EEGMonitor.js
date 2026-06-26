@@ -12,6 +12,22 @@ const EEGMonitor = ({ patientId, patientName, eegMode, onClose }) => {
   const [connected, setConnected] = useState(false);
   const [activeMode, setActiveMode] = useState(eegMode || 'GENERAL');
   const [p300Result, setP300Result] = useState(null);
+  useEffect(() => {
+
+      fetch(
+        "https://cerebro-connect.onrender.com/api/eeg/p300/session/1"
+      )
+      .then(r => r.json())
+      .then(data => {
+
+          console.log("P300 API DATA",data);
+
+          if(data.length>0)
+              setP300Result(data[0]);
+
+      });
+
+  }, []);
   const [eegData, setEegData] = useState({
     voltage: [],
     alpha: [],
