@@ -87,6 +87,19 @@ const EEGMonitor = ({ patientId, patientName, eegMode, onClose }) => {
 
         // Listen for mode changes broadcast by backend when a session starts
         client.subscribe('/topic/mode', (message) => {
+           console.log("SUBSCRIBING TO P300 NOW");
+           
+           client.subscribe('/topic/p300', (message) => {
+
+               console.log("P300 MESSAGE ARRIVED");
+
+               const result = JSON.parse(message.body);
+
+               console.log(result);
+
+               setP300Result(result);
+           });
+
           try {
             const payload = JSON.parse(message.body);
             console.log('Mode received from backend:', payload.mode);
