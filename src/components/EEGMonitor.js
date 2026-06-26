@@ -72,54 +72,48 @@ const EEGMonitor = ({ patientId, patientName, eegMode, onClose }) => {
       heartbeatOutgoing: 0,
 
       onConnect: () => {
-        console.log('EEGMonitor connected to WebSocket:', WS_URL);
-        setConnected(true);
+          console.log('EEGMonitor connected to WebSocket:', WS_URL);
+          setConnected(true);
 
-        client.subscribe('/topic/eeg', (message) => {
-          try {
-            const data = JSON.parse(message.body);
-            console.log('EEG websocket message:', data);
-            handleNewData(data);
-          } catch (err) {
-            console.error('Failed to parse EEG message:', err, message.body);
-          }
-        });
+          client.subscribe('/topic/eeg', (message) => {
+              try {
+                  const data = JSON.parse(message.body);
+                  console.log('EEG websocket message:', data);
+                  handleNewData(data);
+              } catch (err) {
+                  console.error('Failed to parse EEG message:', err, message.body);
+              }
+          });
 
-        // Listen for mode changes broadcast by backend when a session starts
-        client.subscribe('/topic/mode', (message) => {
-           console.log("SUBSCRIBING TO P300 NOW");
-           
-           client.subscribe('/topic/p300', (message) => {
+          client.subscribe('/topic/mode', (message) => {
+              try {
+                  const payload = JSON.parse(message.body);
+                  console.log('Mode received from backend:', payload.mode);
 
-               console.log("P300 MESSAGE ARRIVED");
+                  if (payload.mode)
+                      setActiveMode(payload.mode);
 
-               const result = JSON.parse(message.body);
+              } catch (err) {
+                  console.error('Failed to parse mode message:', err);
+              }
+          });
 
-               console.log(result);
+          console.log("SUBSCRIBING TO P300");
 
-               setP300Result(result);
-           });
+          client.subscribe('/topic/p300', (message) => {
+              try {
+                  console.log("P300 MESSAGE ARRIVED");
 
-          try {
-            const payload = JSON.parse(message.body);
-            console.log('Mode received from backend:', payload.mode);
-            if (payload.mode) setActiveMode(payload.mode);
-          } catch (err) {
-            console.error('Failed to parse mode message:', err);
-          }
-        });
-        console.log("SUBSCRIBING TO P300");
+                  const result = JSON.parse(message.body);
 
-        // Listen for P300 ERP results (COMA mode)
-        client.subscribe('/topic/p300', (message) => {
-          try {
-            const result = JSON.parse(message.body);
-            console.log('P300 result received:', result);
-            setP300Result(result);
-          } catch (err) {
-            console.error('Failed to parse P300 message:', err);
-          }
-        });
+                  console.log("P300 RESULT:", result);
+
+                  setP300Result(result);
+
+              } catch (err) {
+                  console.error('Failed to parse P300 message:', err);
+              }
+          });
       },
 
       onDisconnect: () => {
