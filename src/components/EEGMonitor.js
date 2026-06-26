@@ -1,9 +1,9 @@
 /* eslint-disable */
-import axios from 'axios';
 import React, { useState, useEffect, useRef } from 'react';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
-import API_BASE_URL from '../config';
+import API_BASE_URL from './config';
+import P300ResultPanel from './P300ResultPanel';
 
 const WS_URL = API_BASE_URL.replace('/api', '/ws');
 const MAX_POINTS = 100;
@@ -11,6 +11,7 @@ const MAX_POINTS = 100;
 const EEGMonitor = ({ patientId, patientName, eegMode, onClose }) => {
   const [connected, setConnected] = useState(false);
   const [activeMode, setActiveMode] = useState(eegMode || 'GENERAL');
+  const [p300Result, setP300Result] = useState(null);
   const [eegData, setEegData] = useState({
     voltage: [],
     alpha: [],
@@ -21,9 +22,6 @@ const EEGMonitor = ({ patientId, patientName, eegMode, onClose }) => {
   });
   const [latestReading, setLatestReading] = useState(null);
   const clientRef = useRef(null);
-
-  const [oddballRunning, setOddballRunning] = useState(false);
-  const oddballRef = useRef(null);
 
   const canvasRefs = {
     voltage: useRef(null),
@@ -36,13 +34,7 @@ const EEGMonitor = ({ patientId, patientName, eegMode, onClose }) => {
   useEffect(() => {
     connectWebSocket();
     return () => {
-       if (clientRef.current)
-          clientRef.current.deactivate();
-
-        if (oddballRef.current)
-          clearInterval(
-            oddballRef.current
-          );
+      if (clientRef.current) clientRef.current.deactivate();
     };
   }, []);
 
@@ -85,6 +77,17 @@ const EEGMonitor = ({ patientId, patientName, eegMode, onClose }) => {
             if (payload.mode) setActiveMode(payload.mode);
           } catch (err) {
             console.error('Failed to parse mode message:', err);
+          }
+        });
+
+        // Listen for P300 ERP results (COMA mode)
+        client.subscribe('/topic/p300', (message) => {
+          try {
+            const result = JSON.parse(message.body);
+            console.log('P300 result received:', result);
+            setP300Result(result);
+          } catch (err) {
+            console.error('Failed to parse P300 message:', err);
           }
         });
       },
@@ -274,114 +277,6 @@ const EEGMonitor = ({ patientId, patientName, eegMode, onClose }) => {
     return colors[state] || '#888888';
   };
 
-  const sendStimulus = async () => {
-    try {
-      await axios.post(
-        `${API_BASE_URL}/stimulus`,
-        {
-          stimulus: "ODDBALL"
-        }
-      );
-
-      console.log("ODDBALL SENT");
-
-    } catch (err) {
-
-      console.error(
-        "Stimulus Error",
-        err
-      );
-
-    }
-  };
-
-  const playTone = (frequency) => {
-
-    const AudioContextClass =
-      window.AudioContext ||
-      window.webkitAudioContext;
-
-    const audioContext =
-      new AudioContextClass();
-
-    const oscillator =
-      audioContext.createOscillator();
-
-    const gainNode =
-      audioContext.createGain();
-
-    oscillator.connect(gainNode);
-
-    gainNode.connect(
-      audioContext.destination
-    );
-
-    oscillator.frequency.value =
-      frequency;
-
-    oscillator.type = "sine";
-
-    gainNode.gain.setValueAtTime(
-      0.2,
-      audioContext.currentTime
-    );
-
-    oscillator.start();
-
-    oscillator.stop(
-      audioContext.currentTime + 0.2
-    );
-  };
-
-  const startOddball = () => {
-
-    if (oddballRunning)
-      return;
-
-    setOddballRunning(true);
-
-    oddballRef.current =
-      setInterval(async () => {
-
-        const randomValue =
-          Math.random();
-
-        if (randomValue < 0.8) {
-
-          playTone(1000);
-
-          console.log(
-            "STANDARD"
-          );
-
-        } else {
-
-          playTone(1500);
-
-          console.log(
-            "ODDBALL"
-          );
-
-          await sendStimulus();
-        }
-
-      }, 1500);
-  };
-
-  const stopOddball = () => {
-
-    if (oddballRef.current) {
-
-      clearInterval(
-        oddballRef.current
-      );
-
-      oddballRef.current = null;
-    }
-
-    setOddballRunning(false);
-  };
-
   const styles = {
     overlay: {
       position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)',
@@ -487,49 +382,6 @@ const EEGMonitor = ({ patientId, patientName, eegMode, onClose }) => {
         </div>
 
         <div style={styles.content}>
-        {activeMode === "COMA" && (
-
-          <div
-            style={{
-              marginBottom: 20,
-              display: 'flex',
-              gap: 10
-            }}
-          >
-
-            <button
-              onClick={startOddball}
-              disabled={oddballRunning}
-              style={{
-                padding: '10px 20px',
-                background: '#00aa55',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer'
-              }}
-            >
-              Start Oddball
-            </button>
-
-            <button
-              onClick={stopOddball}
-              disabled={!oddballRunning}
-              style={{
-                padding: '10px 20px',
-                background: '#cc3333',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer'
-              }}
-            >
-              Stop Oddball
-            </button>
-
-          </div>
-
-        )}
           <div style={styles.statsRow}>
             <div style={styles.statCard('#ffffff')}>
               <p style={styles.statValue('#ffffff')}>
@@ -593,23 +445,29 @@ const EEGMonitor = ({ patientId, patientName, eegMode, onClose }) => {
             </div>
           </div>
 
-          <div style={styles.graphsGrid}>
-            <div style={styles.graphCardWide}>
-              <canvas ref={canvasRefs.voltage} width={1200} height={120} style={styles.canvas} />
+          {activeMode === 'COMA' ? (
+            <div style={styles.graphsGrid}>
+              <P300ResultPanel result={p300Result} patientName={patientName} />
             </div>
-            <div style={styles.graphCard}>
-              <canvas ref={canvasRefs.alpha} width={600} height={120} style={styles.canvas} />
+          ) : (
+            <div style={styles.graphsGrid}>
+              <div style={styles.graphCardWide}>
+                <canvas ref={canvasRefs.voltage} width={1200} height={120} style={styles.canvas} />
+              </div>
+              <div style={styles.graphCard}>
+                <canvas ref={canvasRefs.alpha} width={600} height={120} style={styles.canvas} />
+              </div>
+              <div style={styles.graphCard}>
+                <canvas ref={canvasRefs.beta} width={600} height={120} style={styles.canvas} />
+              </div>
+              <div style={styles.graphCard}>
+                <canvas ref={canvasRefs.theta} width={600} height={120} style={styles.canvas} />
+              </div>
+              <div style={styles.graphCard}>
+                <canvas ref={canvasRefs.delta} width={600} height={120} style={styles.canvas} />
+              </div>
             </div>
-            <div style={styles.graphCard}>
-              <canvas ref={canvasRefs.beta} width={600} height={120} style={styles.canvas} />
-            </div>
-            <div style={styles.graphCard}>
-              <canvas ref={canvasRefs.theta} width={600} height={120} style={styles.canvas} />
-            </div>
-            <div style={styles.graphCard}>
-              <canvas ref={canvasRefs.delta} width={600} height={120} style={styles.canvas} />
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </>
