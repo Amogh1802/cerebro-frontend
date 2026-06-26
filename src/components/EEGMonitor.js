@@ -79,6 +79,7 @@ const EEGMonitor = ({ patientId, patientName, eegMode, onClose }) => {
             console.error('Failed to parse mode message:', err);
           }
         });
+        console.log("SUBSCRIBING TO P300");
 
         // Listen for P300 ERP results (COMA mode)
         client.subscribe('/topic/p300', (message) => {
