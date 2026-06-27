@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
-import API_BASE_URL from './config';
+import API_BASE_URL from '../config';
 import P300ResultPanel from './P300ResultPanel';
 
 const WS_URL = API_BASE_URL.replace('/api', '/ws');
