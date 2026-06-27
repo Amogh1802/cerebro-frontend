@@ -1,5 +1,6 @@
 /* eslint-disable */
 import React, { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import API_BASE_URL from './config';
@@ -12,22 +13,8 @@ const EEGMonitor = ({ patientId, patientName, eegMode, onClose }) => {
   const [connected, setConnected] = useState(false);
   const [activeMode, setActiveMode] = useState(eegMode || 'GENERAL');
   const [p300Result, setP300Result] = useState(null);
-  useEffect(() => {
-
-      fetch(
-        "https://cerebro-connect.onrender.com/api/eeg/p300/session/1"
-      )
-      .then(r => r.json())
-      .then(data => {
-
-          console.log("P300 API DATA",data);
-
-          if(data.length>0)
-              setP300Result(data[0]);
-
-      });
-
-  }, []);
+  const [oddballRunning, setOddballRunning] = useState(false);
+  const oddballRef = useRef(null);
   const [eegData, setEegData] = useState({
     voltage: [],
     alpha: [],
@@ -63,6 +50,61 @@ const EEGMonitor = ({ patientId, patientName, eegMode, onClose }) => {
     return Number.isFinite(n) ? n : fallback;
   };
 
+  // ── Oddball stimulus logic (COMA mode only) ──
+  const sendStimulus = async () => {
+    try {
+      await axios.post(`${API_BASE_URL}/stimulus`, { stimulus: "ODDBALL" });
+      console.log("ODDBALL SENT");
+    } catch (err) {
+      console.error("Stimulus Error", err);
+    }
+  };
+
+  const playTone = (frequency, duration = 200) => {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    const audioContext = new AudioContextClass();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    oscillator.frequency.value = frequency;
+    oscillator.type = "sine";
+    gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + duration / 1000);
+  };
+
+  const startOddball = () => {
+    if (oddballRunning) return;
+    setOddballRunning(true);
+
+    oddballRef.current = setInterval(async () => {
+      const randomValue = Math.random();
+      if (randomValue < 0.8) {
+        playTone(1000);
+        console.log("STANDARD");
+      } else {
+        playTone(1500);
+        console.log("ODDBALL");
+        await sendStimulus();
+      }
+    }, 1500);
+  };
+
+  const stopOddball = () => {
+    if (oddballRef.current) {
+      clearInterval(oddballRef.current);
+      oddballRef.current = null;
+    }
+    setOddballRunning(false);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (oddballRef.current) clearInterval(oddballRef.current);
+    };
+  }, []);
+
   const connectWebSocket = () => {
     const client = new Client({
       webSocketFactory: () => new SockJS(WS_URL),
@@ -72,48 +114,40 @@ const EEGMonitor = ({ patientId, patientName, eegMode, onClose }) => {
       heartbeatOutgoing: 0,
 
       onConnect: () => {
-          console.log('EEGMonitor connected to WebSocket:', WS_URL);
-          setConnected(true);
+        console.log('EEGMonitor connected to WebSocket:', WS_URL);
+        setConnected(true);
 
-          client.subscribe('/topic/eeg', (message) => {
-              try {
-                  const data = JSON.parse(message.body);
-                  console.log('EEG websocket message:', data);
-                  handleNewData(data);
-              } catch (err) {
-                  console.error('Failed to parse EEG message:', err, message.body);
-              }
-          });
+        client.subscribe('/topic/eeg', (message) => {
+          try {
+            const data = JSON.parse(message.body);
+            console.log('EEG websocket message:', data);
+            handleNewData(data);
+          } catch (err) {
+            console.error('Failed to parse EEG message:', err, message.body);
+          }
+        });
 
-          client.subscribe('/topic/mode', (message) => {
-              try {
-                  const payload = JSON.parse(message.body);
-                  console.log('Mode received from backend:', payload.mode);
+        // Listen for mode changes broadcast by backend when a session starts
+        client.subscribe('/topic/mode', (message) => {
+          try {
+            const payload = JSON.parse(message.body);
+            console.log('Mode received from backend:', payload.mode);
+            if (payload.mode) setActiveMode(payload.mode);
+          } catch (err) {
+            console.error('Failed to parse mode message:', err);
+          }
+        });
 
-                  if (payload.mode)
-                      setActiveMode(payload.mode);
-
-              } catch (err) {
-                  console.error('Failed to parse mode message:', err);
-              }
-          });
-
-          console.log("SUBSCRIBING TO P300");
-
-          client.subscribe('/topic/p300', (message) => {
-              try {
-                  console.log("P300 MESSAGE ARRIVED");
-
-                  const result = JSON.parse(message.body);
-
-                  console.log("P300 RESULT:", result);
-
-                  setP300Result(result);
-
-              } catch (err) {
-                  console.error('Failed to parse P300 message:', err);
-              }
-          });
+        // Listen for P300 ERP results (COMA mode)
+        client.subscribe('/topic/p300', (message) => {
+          try {
+            const result = JSON.parse(message.body);
+            console.log('P300 result received:', result);
+            setP300Result(result);
+          } catch (err) {
+            console.error('Failed to parse P300 message:', err);
+          }
+        });
       },
 
       onDisconnect: () => {
@@ -469,6 +503,41 @@ const EEGMonitor = ({ patientId, patientName, eegMode, onClose }) => {
 
           {activeMode === 'COMA' ? (
             <div style={styles.graphsGrid}>
+              <div style={{ gridColumn: '1 / -1', marginBottom: 16, textAlign: 'center' }}>
+                <button
+                  onClick={startOddball}
+                  disabled={oddballRunning}
+                  style={{
+                    background: oddballRunning ? '#1a3a2e' : '#00ff88',
+                    color: oddballRunning ? '#00ff8866' : '#06281c',
+                    border: 'none',
+                    borderRadius: 8,
+                    padding: '10px 24px',
+                    fontWeight: 700,
+                    fontSize: 14,
+                    cursor: oddballRunning ? 'not-allowed' : 'pointer',
+                    marginRight: 12,
+                  }}
+                >
+                  ▶ Start Oddball
+                </button>
+                <button
+                  onClick={stopOddball}
+                  disabled={!oddballRunning}
+                  style={{
+                    background: !oddballRunning ? '#3a1a1a' : '#ff4466',
+                    color: !oddballRunning ? '#ff446666' : '#fff',
+                    border: 'none',
+                    borderRadius: 8,
+                    padding: '10px 24px',
+                    fontWeight: 700,
+                    fontSize: 14,
+                    cursor: !oddballRunning ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  ■ Stop Oddball
+                </button>
+              </div>
               <P300ResultPanel result={p300Result} patientName={patientName} />
             </div>
           ) : (
