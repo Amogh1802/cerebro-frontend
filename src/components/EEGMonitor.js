@@ -5,6 +5,7 @@ import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import API_BASE_URL from '../config';
 import P300ResultPanel from './P300ResultPanel';
+import DementiaResultPanel from './DementiaResultPanel';
 
 const WS_URL = API_BASE_URL.replace('/api', '/ws');
 const MAX_POINTS = 100;
@@ -13,6 +14,7 @@ const EEGMonitor = ({ patientId, patientName, eegMode, onClose }) => {
   const [connected, setConnected] = useState(false);
   const [activeMode, setActiveMode] = useState(eegMode || 'GENERAL');
   const [p300Result, setP300Result] = useState(null);
+  const [dementiaResult, setDementiaResult] = useState(null);
   const [oddballRunning, setOddballRunning] = useState(false);
   const oddballRef = useRef(null);
   const [eegData, setEegData] = useState({
@@ -146,6 +148,17 @@ const EEGMonitor = ({ patientId, patientName, eegMode, onClose }) => {
             setP300Result(result);
           } catch (err) {
             console.error('Failed to parse P300 message:', err);
+          }
+        });
+
+        // Listen for Dementia screening results (DEMENTIA mode)
+        client.subscribe('/topic/dementia', (message) => {
+          try {
+            const result = JSON.parse(message.body);
+            console.log('Dementia result received:', result);
+            setDementiaResult(result);
+          } catch (err) {
+            console.error('Failed to parse Dementia message:', err);
           }
         });
       },
@@ -440,7 +453,7 @@ const EEGMonitor = ({ patientId, patientName, eegMode, onClose }) => {
         </div>
 
         <div style={styles.content}>
-          {activeMode !== 'COMA' && (
+          {activeMode !== 'COMA' && activeMode !== 'DEMENTIA' && (
             <div style={styles.statsRow}>
               <div style={styles.statCard('#ffffff')}>
                 <p style={styles.statValue('#ffffff')}>
@@ -539,6 +552,10 @@ const EEGMonitor = ({ patientId, patientName, eegMode, onClose }) => {
                 </button>
               </div>
               <P300ResultPanel result={p300Result} patientName={patientName} />
+            </div>
+          ) : activeMode === 'DEMENTIA' ? (
+            <div style={styles.graphsGrid}>
+              <DementiaResultPanel result={dementiaResult} patientName={patientName} />
             </div>
           ) : (
             <div style={styles.graphsGrid}>
