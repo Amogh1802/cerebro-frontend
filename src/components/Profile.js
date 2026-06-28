@@ -33,9 +33,16 @@ const Profile = ({ role }) => {
       </Box>
       <Box sx={{ mt: 4 }}>
         <Typography variant="h6">{role === 'DOCTOR' ? 'Patients History' : 'My History'}</Typography>
-        <List>
-          <ListItem><ListItemText primary="EEG Report: General" secondary="Alpha: 12.4 μV²" /></ListItem>
-        </List>
+       <List>
+         {sessions.map((session) => (
+           <ListItem key={session.id}>
+             <ListItemText
+               primary={`EEG Report: ${session.mode}`}
+               secondary={session.notes || "-"}
+             />
+           </ListItem>
+         ))}
+       </List>
         <Box sx={{ mt: 4 }}>
           <Typography variant="h6">EEG Graph</Typography>
           <Line data={chartData} options={options} />
