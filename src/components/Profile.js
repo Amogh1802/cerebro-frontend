@@ -16,6 +16,7 @@ import {
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
 const Profile = ({ role }) => {
+
   const navigate = useNavigate();
 
   const [sessions, setSessions] = useState([]);
