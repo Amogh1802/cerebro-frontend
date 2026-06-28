@@ -18,6 +18,36 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 const Profile = ({ role }) => {
   const navigate = useNavigate();
 
+  const [sessions, setSessions] = useState([]);
+
+  useEffect(() => {
+
+    const fetchSessions = async () => {
+      try {
+
+        const token = localStorage.getItem("token");
+        const patientId = localStorage.getItem("userId");
+
+        const response = await axios.get(
+          `http://localhost:9090/api/eeg/sessions/${patientId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        );
+
+        setSessions(response.data);
+
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchSessions();
+
+  }, []);
+
   const chartData = {
     labels: ['Session 1', 'Session 2', 'Session 3'],
     datasets: [{ label: 'Alpha Power', data: [12.4, 15.2, 10.8], borderColor: 'rgb(75, 192, 192)', tension: 0.1 }],
