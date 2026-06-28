@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { Button, Typography, Container, Box, List, ListItem, ListItemText } from '@mui/material';
 import { Line } from 'react-chartjs-2';
