@@ -52,9 +52,6 @@ const Profile = ({ role }) => {
 
   const chartData = {
     labels: ['Session 1', 'Session 2', 'Session 3'],
-    datasets: [{ label: 'Alpha Power', data: [12.4, 15.2, 10.8], borderColor: 'rgb(75, 192, 192)', tension: 0.1 }],
-  };
-
   const options = { responsive: true, plugins: { legend: { position: 'top' }, title: { display: true, text: 'EEG Progress' } } };
 
   return (
