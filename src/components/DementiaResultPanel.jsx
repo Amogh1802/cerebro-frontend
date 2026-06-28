@@ -111,7 +111,7 @@ const DementiaResultPanel = ({ result, patientName }) => {
 
         <div style={styles.probabilityRow}>
           <span style={styles.probabilityValue}>
-            Confidence: {probabilityPct.toFixed(1)}%
+            Probablity: {probabilityPct.toFixed(1)}%
           </span>
           <div style={styles.barTrack}>
             <div style={styles.barFill(color, probabilityPct)} />
